@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="ASCII"?>
+<sdkproject:SdkProject xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:sdkproject="http://www.xilinx.com/sdkproject" name="firmware-RPU" location="/home/mikarmida/Desktop/Vitis/firmware-RPU" platform="/home/mikarmida/Desktop/Vitis/zcu104/export/zcu104/zcu104.xpfm" platformUID="xilinx:project_1:project_1:1.0(custom)" systemProject="firmware-RPU_system" sysConfig="zcu104" runtime="cpp" cpu="freertos10_xilinx_psu_cortexr5_0" cpuInstance="psu_cortexr5_0" os="freertos10_xilinx" mssSignature="5c8be27aa06ba7dafd9f4f8cded85629">
+  <configuration name="Debug" id="xilinx.gnu.arm.r5.exe.debug.1510491216">
+    <configBuildOptions xsi:type="sdkproject:SdkOptions"/>
+    <lastBuildOptions xsi:type="sdkproject:SdkOptions"/>
+  </configuration>
+  <configuration name="Release" id="xilinx.gnu.arm.r5.exe.release.2007303089" dirty="true">
+    <configBuildOptions xsi:type="sdkproject:SdkOptions"/>
+  </configuration>
+  <template appTemplateName="empty_application"/>
+</sdkproject:SdkProject>
