@@ -126,7 +126,7 @@ int TaskManager(struct rpmsg_device *rdev, void *priv)
 	/* Initialization parameter ss*/
 
 
-	  xTaskCreate(sporadicServer, "SS Task", 256, NULL, 4, &ssTask);
+	  xTaskCreate(sporadicServer, "SS Task", 256, NULL, 5, &ssTask);
 	 // xTaskCreate(aperiodicTask1, "SS Task", 256, NULL, 6, &ssTask);
 	//  vTaskDelay(1000000);
 	for( ;; )
@@ -168,7 +168,7 @@ int TaskManager(struct rpmsg_device *rdev, void *priv)
 		}
 
 		else if(shutdown_req == 1){
-			LPRINTF("\n[RPU]: Unexpected shutdown.\n");
+			printf("\n[RPU]: Unexpected shutdown.\n");
 			break;
 		}
 
@@ -324,7 +324,6 @@ void controlSwitchingOut (TaskHandle_t * currentTcb){
 
 	if (runningTask == currentTcb && controlling ){
 		runtime += (xTaskGetTickCount() - startTime) ;
-
 	} else if (!controlling)
 		runtime = 0;
 }
@@ -334,9 +333,15 @@ void controlSwitchingOut (TaskHandle_t * currentTcb){
  * NB: for stopping any aperiodic task, it needs to call this function
  * *******************************************************/
 void deleteATask(){
-
 	runningTask = NULL;
-	LPRINTF("%d Aperiodic task 1 terminate its execution at time: %d \n", pdTICKS_TO_MS(xTaskGetTickCount()));
+	totalRuntime+=runtime;
+	CS -= runtime;
+	LPRINTF("%d Aperiodic task 1 terminate its execution at time: %d", pdTICKS_TO_MS(xTaskGetTickCount()));
+//	LPRINTF("[SS] task ended. totalruntime = %d ticks, %d ms, runtime %d cs %d\n",totalRuntime,pdTICKS_TO_MS(totalRuntime),runtime,CS);
+//	LPRINTF("[SS] aperiodic task ended. \n");
+	totalRuntime = 0;
+	RA_TOT+=runtime;
+	controlling = 0;
 	xEventGroupSetBits(eventManager, EVENT_STOP);
 	vTaskDelete(NULL);
 }
@@ -370,7 +375,7 @@ void sporadicServer(){
 							runningIndex = i;
 							checkWCET(0,i,0);
 						} else{
-							//LPRINTF("[SS] resource occupied, pushing task in queue. \n");
+							LPRINTF("[SS] resource occupied, pushing task in queue. \n");
 							push_queuePR(pendingRequest, request_code);
 						}
 
@@ -396,12 +401,6 @@ void sporadicServer(){
 
 					control = uxBits & EVENT_STOP;
 					if (control == EVENT_STOP){
-						totalRuntime+=runtime;
-						CS -= runtime;
-						RA_TOT+=runtime;
-						controlling = 0;
-						//LPRINTF("[SS] task ended. totalruntime = %d ticks, %d ms, runtime %d cs %d\n",totalRuntime,pdTICKS_TO_MS(totalRuntime),runtime,CS);
-						totalRuntime = 0;
 						xEventGroupClearBits(eventManager, EVENT_STOP);
 						if(CS > 0 && !queuePRIsEmpty(pendingRequest)){
 
@@ -431,7 +430,7 @@ void sporadicServer(){
 
 				control = uxBits & EVENT_SUSPEND;
 				if (control == EVENT_SUSPEND){
-					
+
 					xEventGroupClearBits(eventManager, EVENT_SUSPEND);
 					checkWCET(totalRuntime,runningIndex,1 );
 
@@ -497,8 +496,8 @@ void startTasks(int index,TickType_t wcet, int suspend ){
 			time = TS;
 
 		TimerHandle_t timer = xTimerCreate("Timer RT",  time, pdFALSE, (void *)TIMER_TS_ID ,timerCallBack);
-		
-		LPRINTF("[SS] Next RT at time: %d , with TA= %d \n", pdTICKS_TO_MS(time+xTaskGetTickCount()), TA);
+
+		LPRINTF("[SS] d Next RT at time: %d", pdTICKS_TO_MS(time+xTaskGetTickCount()));
 
 		TIMER_TS_ID++;
 		if (TIMER_TS_ID % N_MAX_TIMER == 0)
@@ -525,7 +524,7 @@ void timerCallBack( TimerHandle_t timerHandler){
 			break;
 
 		default:
-			xTaskCreate(timerTS, "TASK T_TS", 256, NULL, configMAX_PRIORITIES-2,&TTStask);
+			xTaskCreate(timerTS, "TASK T_TS", 256, NULL, configMAX_PRIORITIES-1,&TTStask);
 			break;
 
 	}
@@ -534,6 +533,7 @@ void timerCallBack( TimerHandle_t timerHandler){
 
 
 void timerTS(void * pvParameters){
+
 	TickType_t RA = pop_queue(pendingRA);
 	CS += RA;
 	int HigherPriorityTaskEx = 0;
@@ -559,8 +559,8 @@ void timerTS(void * pvParameters){
 	else if (runningTask == NULL && !queuePRIsEmpty(pendingRequest)){
 		xEventGroupSetBits(eventManager, EVENT_QUEUE);
 	}
-	if (RA > 0)
-		LPRINTF("[TIMERTS] capacity CS recharged of %d ticks at time %d. CS = %d\n",RA,pdTICKS_TO_MS(xTaskGetTickCount()),CS );
+
+	LPRINTF("[TIMERTS] capacity CS recharged of %d ticks at time %d. CS = %d\n",RA,pdTICKS_TO_MS(xTaskGetTickCount()),CS );
 
 	vTaskDelete(NULL);
 }
@@ -574,36 +574,27 @@ void timerCS(void* pvParameters){
 
 				LPRINTF("[TIMERCSOLD] error recharging timer\n");
 
-			} //else
+			} else{
 				//LPRINTF("[TIMERCSOLD] timer expired but remaining time execution equal to %d.\n", remainingExTime);
-
+			}
 		}
 		else if (remainingExTime == 0){
-	    	CS -= CS_old;
-	    	if (CS > 0){
-	    		CS_old = CS;
-	    		if (xTimerChangePeriod(timerCSOLD,remainingExTime,5) == pdFAIL){
+	    	CS = 0;
+			totalRuntime += runtime;
+			suspendedTask = 1;
+			push_queue(pendingRA, runtime + RA_TOT);
+			RA_TOT = 0;
+			controlling = 0;
+			vTaskSuspend(runningTask);
+			LPRINTF("[TIMERCSOLD] Timer expired, capacity all consumed at time: %d.\n", pdTICKS_TO_MS(xTaskGetTickCount()));
 
-	    						LPRINTF("[TIMERCSOLD] error recharging timer\n");
-
-	    					}
-	    	} else {
-				totalRuntime += runtime;
-				
-				LPRINTF("[TIMERCSOLD] Timer expired, capacity all consumed at time: %d.\n Aperiodic Task suspended. \n", pdTICKS_TO_MS(xTaskGetTickCount()));
-				suspendedTask = 1;
-				push_queue(pendingRA, runtime + RA_TOT);
-				RA_TOT = 0;
-				controlling = 0;
-				vTaskSuspend(runningTask);
-
-	    	}
 		} else
 			LPRINTF("[TIMERCSOLD] ERROR cs overflow. \n");
 
-	} //else {
-//		LPRINTF("[TIMERCSOLD] task ended. \n");
-//	}
+	} else {
+		//LPRINTF("[TIMERCSOLD] task ended. \n");
+		controlling = 0;
+	}
 
 
 	vTaskDelete(NULL);

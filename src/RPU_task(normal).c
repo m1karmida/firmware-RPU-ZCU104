@@ -10,11 +10,11 @@
 
 
 void activeWaiting(const int ms){
-	TickType_t time1 = xTaskGetTickCount();
-	while(xTaskGetTickCount() < time1 + pdMS_TO_TICKS(ms));
+
+	TickType_t time;
+	time = xTaskGetTickCount();
+	while( xTaskGetTickCount() - time < pdMS_TO_TICKS(ms) );
 //	TickType_t start,end;
-//	TickType_t xLastWakeTime = xTaskGetTickCount();
-//	TickType_t xFrequency = 15;
 //    long j=0;
 //  long zero = 0;
 //  long uno = 0;
@@ -23,16 +23,16 @@ void activeWaiting(const int ms){
 //    f1 = 2;
 //    f2 = 3;
 
-//    TickType_t WCET, media;
-//    WCET = 0;
-//    media = 0;
+//  TickType_t WCET, media;
+//  WCET = 0;
+//  media = 0;
 //
 //    for( int i = 0;i<(ms/10);i++)
 //    {
 //        // Wait for the next cycle.
-//   	start = xTaskGetTickCount();
+////    	start = xTaskGetTickCount();
 //    	j = 0;
-//        while(j<400000){
+//        while(j<300000){
 //        	f = f %1;
 //        	f1 = f1 % 1;
 //        	f2 = f2 % 1;
@@ -50,7 +50,7 @@ void activeWaiting(const int ms){
 //        else if ((end-start)==1)
 //        	uno++;
 //
-//	}
+//    }
 //    media /= 1000;
 //    LPRINTF("WCET: %d ticks \t media : %d ticks \n",WCET,media);
 //    LPRINTF("WCET: %d ms \t media : %d ms \n",pdTICKS_TO_MS(WCET),pdTICKS_TO_MS(media));
@@ -82,15 +82,14 @@ void periodicTask1(void *unused_arg)
 	         restart_time = xTaskGetTickCount() - start;
 	         start = xTaskGetTickCount();
 
-	         LPRINTF("[PTASK1] Periodic Task 1 start its execution at time: %d \n", pdTICKS_TO_MS(xTaskGetTickCount()));
+	         LPRINTF("[PTASK1] Periodic Task 1 start its execution at time: %d", pdTICKS_TO_MS(xTaskGetTickCount()));
 
 	         activeWaiting(10*5);
 
-	         LPRINTF("[PTASK1] Periodic Task 1 terminate its execution at time: %d \n", pdTICKS_TO_MS(xTaskGetTickCount()));
+	         LPRINTF("[PTASK1] Periodic Task 1 terminate its execution at time: %d", pdTICKS_TO_MS(xTaskGetTickCount()));
 
 	         end = xTaskGetTickCount();
-//	         if (i%50  == 0)
-	    //     LPRINTF("[PT1]: %d\n", end-start);
+//	         if (i%50  == 0) LPRINTF("[RPU]: Periodic Task 1 execution time: %d\n", end-start);
 	         //Se il tempo di restart + l'esecuzione del task è maggiore di due volte il periodo -> DEADLINE superata
 	         if(((restart_time + (end-start)) > 2*xFrequency) && first==0 )	LPRINTF("[RPU]: Periodic Task 1 DEADLINE EXCEEDED \n");
 	         if(first==1)first = 0;
@@ -121,15 +120,14 @@ void periodicTask2(void *unused_arg)
 	         restart_time = xTaskGetTickCount() - start;
 	         start = xTaskGetTickCount();
 
-	         LPRINTF("[PTASK2] Periodic Task 2 start its execution at time: %d \n", pdTICKS_TO_MS(xTaskGetTickCount()));
+	         LPRINTF("[PTASK2] Periodic Task 2 start its execution at time: %d", pdTICKS_TO_MS(xTaskGetTickCount()));
 
 	         activeWaiting(10*10);
 
-	         LPRINTF("[PTASK2] Periodic Task 2 terminate its execution at time: %d \n", pdTICKS_TO_MS(xTaskGetTickCount()));
+	         LPRINTF("[PTASK2] Periodic Task 2 terminate its execution at time: %d", pdTICKS_TO_MS(xTaskGetTickCount()));
 
 	         end = xTaskGetTickCount();
-	         //if (i%20 == 0)
-	        	// LPRINTF("[P2]:%d\n", end-start);
+//	         if (i%20 == 0) LPRINTF("[RPU]: Periodic Task 2 execution time: %d\n", end-start);
 	         //LPRINTF("[RPU]: Periodic Task 2 execution time: %d\n", end-start);
 	         //Se il tempo di restart + l'esecuzione del task è maggiore di due volte il periodo -> DEADLINE superata
 	         if(((restart_time + (end-start)) > 2*xFrequency) && first==0 )	LPRINTF("[RPU]: Periodic Task 2 DEADLINE EXCEEDED");
@@ -224,7 +222,7 @@ void periodicTask5(void *unused_arg)
 	         restart_time = xTaskGetTickCount() - start;
 	         start = xTaskGetTickCount();
 
-	         activeWaiting(300);
+	         activeWaiting(10*30);
 
 	         end = xTaskGetTickCount();
 	         //LPRINTF("[RPU]: Periodic Task 5 execution time: %d\n", end-start);
@@ -238,7 +236,7 @@ void periodicTask5(void *unused_arg)
 void aperiodicTask1(void *unused_arg)
 {
 
-	 LPRINTF("[RPU]: Aperiodic Task 1 alive t time: %d \n", pdTICKS_TO_MS(xTaskGetTickCount()));
+	 LPRINTF("[RPU]: Aperiodic Task 1 alive...\n");
 	 uint32_t start = 0;
 	 uint32_t end = 0;
 	 const int N = 10;
@@ -255,6 +253,8 @@ void aperiodicTask1(void *unused_arg)
 	 fn1 = 1;
 	 fn2 = 1;
 	 fn = 0;
+
+	 LPRINTF("[ATSK1] Aperiodic task 1 start its execution at time: %d", pdTICKS_TO_MS(xTaskGetTickCount()));
 
 	 for (int i = 0; i< N; i++ ){
 
@@ -273,10 +273,10 @@ void aperiodicTask1(void *unused_arg)
 		 activeWaiting(500);
 
 	 }
-	 
-	 LPRINTF("[ATASK1] Aperiodic task 1 terminate its execution at time: %d \n", pdTICKS_TO_MS(xTaskGetTickCount()));
 
-	 
+	 LPRINTF("[ATASK1] Aperiodic task 1 terminate its execution at time: %d", pdTICKS_TO_MS(xTaskGetTickCount()));
+
+
 //	 end = xTaskGetTickCount();
 //	 TickType_t time = end -start;
 //	 LPRINTF("\n  end - start (in ticks) = %d", time);
