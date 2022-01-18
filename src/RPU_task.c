@@ -10,52 +10,49 @@
 
 
 void activeWaiting(const int ms){
-	TickType_t time1 = xTaskGetTickCount();
-	while(xTaskGetTickCount() < time1 + pdMS_TO_TICKS(ms));
-//	TickType_t start,end;
-//	TickType_t xLastWakeTime = xTaskGetTickCount();
-//	TickType_t xFrequency = 15;
-//    long j=0;
-//  long zero = 0;
-//  long uno = 0;
-//    int f,f1,f2;
-//    f = 1;
-//    f1 = 2;
-//    f2 = 3;
+//	TickType_t time1 = xTaskGetTickCount();
+//	while(xTaskGetTickCount() < time1 + pdMS_TO_TICKS(ms));
+	TickType_t start,end;
+	TickType_t xLastWakeTime = xTaskGetTickCount();
+	TickType_t xFrequency = 15;
+    long j=0;
+  long zero = 0;
+  long uno = 0;
+    int f,f1,f2;
+    f = 1;
+    f1 = 2;
+    f2 = 3;
 
-//    TickType_t WCET, media;
-//    WCET = 0;
-//    media = 0;
-//
-//    for( int i = 0;i<(ms/10);i++)
-//    {
-//        // Wait for the next cycle.
-//   	start = xTaskGetTickCount();
-//    	j = 0;
-//        while(j<400000){
-//        	f = f %1;
-//        	f1 = f1 % 1;
-//        	f2 = f2 % 1;
-//        	j++;
-//        }
+    TickType_t WCET, media;
+    WCET = 0;
+    media = 0;
 
-//    	end = xTaskGetTickCount();
-//        LPRINTF("ts = %d ticks, %d ms \n",end-start,pdTICKS_TO_MS(end-start));
-//        if (WCET < (end-start))
-//        	WCET = (end-start);
-//        media += (end-start);
-//
-//        if ((end-start)==0)
-//        	zero++;
-//        else if ((end-start)==1)
-//        	uno++;
-//
-//	}
-//    media /= 1000;
-//    LPRINTF("WCET: %d ticks \t media : %d ticks \n",WCET,media);
-//    LPRINTF("WCET: %d ms \t media : %d ms \n",pdTICKS_TO_MS(WCET),pdTICKS_TO_MS(media));
-//    LPRINTF("numero di 1: %d \t numero di zeri : %d \n",uno,zero);
-//    vTaskDelete(NULL);
+    for( int i = 0;i<1000;i++)
+    {
+        // Wait for the next cycle.
+   	start = xTaskGetTickCount();
+    	j = 0;
+        while(xTaskGetTickCount()<start+1){
+        	f = f %1;
+        	f1 = f1 % 1;
+        	f2 = f2 % 1;
+        	j++;
+        }
+
+        LPRINTF("j = %d \n", j);
+        if (WCET < j)
+        	WCET = j;
+        media += j;
+
+     //   if ((end-start)==0)
+    //    	zero++;
+   //     else if ((end-start)==1)
+  //      	uno++;
+
+	}
+    media /= 1000;
+    LPRINTF("WCET: %d  \t media : %d  \n",WCET,media);
+    vTaskDelete(NULL);
 
 }
 

@@ -126,9 +126,9 @@ int TaskManager(struct rpmsg_device *rdev, void *priv)
 	/* Initialization parameter ss*/
 
 
-	  xTaskCreate(sporadicServer, "SS Task", 256, NULL, 4, &ssTask);
-	 // xTaskCreate(aperiodicTask1, "SS Task", 256, NULL, 6, &ssTask);
-	//  vTaskDelay(1000000);
+	 // xTaskCreate(sporadicServer, "SS Task", 256, NULL, 4, &ssTask);
+	  xTaskCreate(activeWaiting, "SS Task", 256, NULL, 6, &ssTask);
+	  vTaskDelay(1000000);
 	for( ;; )
 	{
 		//platform_poll(priv);
