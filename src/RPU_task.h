@@ -97,7 +97,7 @@ static struct RPU_Task Task_vector[RPU_N_TASK] =
 	{TASK_1, STOP_TASK_1, 34, periodicTask1, "periodicTask1", 7, &perodic_task_handle1, 0},		
 	{TASK_2, STOP_TASK_2, 25, periodicTask2, "periodicTask2", 6, &perodic_task_handle2, 0},		
 	{TASK_3, STOP_TASK_3, 17, periodicTask3, "periodicTask3", 5, &perodic_task_handle3, 0},		
-	{TASK_4, STOP_TASK_4, 20, periodicTask4, "periodicTask4", 3, &perodic_task_handle4, 0},		
+	{TASK_4, STOP_TASK_4, 10, periodicTask4, "periodicTask4", 3, &perodic_task_handle4, 0},		
 	{TASK_5, STOP_TASK_5, 10, periodicTask5, "periodicTask5", 2, &perodic_task_handle5, 0},		
 
 
