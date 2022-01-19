@@ -89,16 +89,16 @@ void aperiodicTask1(void *unused_arg);
 static const int WCET = 50*45;
 /*RPU task
  * NOTE: the second parameter for periodic task represent the percentage utilization factor
- * 		 for aperiodic tasks represent the worst case execution time because the load is not needed for them (handled by SS's load)
+ * 	for aperiodic tasks represent the worst case execution time because the load is not needed for them (handled by SS's load)
  * */
 
 static struct RPU_Task Task_vector[RPU_N_TASK] =
 {
-	{TASK_1, STOP_TASK_1, 34, periodicTask1, "periodicTask1", 7, &perodic_task_handle1, 0},		//Task 1 T=15
-	{TASK_2, STOP_TASK_2, 25, periodicTask2, "periodicTask2", 6, &perodic_task_handle2, 0},		//Task 2 T=40
-	{TASK_3, STOP_TASK_3, 17, periodicTask3, "periodicTask3", 5, &perodic_task_handle3, 0},		//Task 3 T=90
-	{TASK_4, STOP_TASK_4, 20, periodicTask4, "periodicTask4", 3, &perodic_task_handle4, 0},		//Task 4 T=100
-	{TASK_5, STOP_TASK_5, 10, periodicTask5, "periodicTask5", 2, &perodic_task_handle5, 0},		//Task 5 T=300
+	{TASK_1, STOP_TASK_1, 34, periodicTask1, "periodicTask1", 7, &perodic_task_handle1, 0},		
+	{TASK_2, STOP_TASK_2, 25, periodicTask2, "periodicTask2", 6, &perodic_task_handle2, 0},		
+	{TASK_3, STOP_TASK_3, 17, periodicTask3, "periodicTask3", 5, &perodic_task_handle3, 0},		
+	{TASK_4, STOP_TASK_4, 20, periodicTask4, "periodicTask4", 3, &perodic_task_handle4, 0},		
+	{TASK_5, STOP_TASK_5, 10, periodicTask5, "periodicTask5", 2, &perodic_task_handle5, 0},		
 
 
 	{ATASK_1, STOP_ATASK_1, WCET, aperiodicTask1, "aperiodicTask1", 4, &aperodic_task_handle1, 0}
