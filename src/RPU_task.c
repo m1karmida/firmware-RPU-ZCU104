@@ -16,7 +16,7 @@ void activeWaiting(const int ms){
 		f1 = 2;
 		f2 =4;
 		fn = 5;
-		// this function takes about 45 seconds (Worst Case)
+		// this function takes about 45 mseconds (Worst Case)
 		for (int j=0; j<100000;j++){
 			fn = fn % 1;
 			f1 = f1  % 1;
@@ -199,7 +199,7 @@ void periodicTask5(void *unused_arg)
 void aperiodicTask1(void *unused_arg)
 {
 
-	 LPRINTF("[RPU]: ap start: %d \n", xTaskGetTickCount());
+	 LPRINTF("[ATASK1]: ap start: %d \n", xTaskGetTickCount());
 	 uint32_t start = 0;
 	 uint32_t end = 0;
 	 const int N = 2;

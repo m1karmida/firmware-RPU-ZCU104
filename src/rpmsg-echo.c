@@ -31,7 +31,7 @@
 //Static variable
 static struct rpmsg_endpoint lept;		//Endpoint
 static int shutdown_req = 0;			//Request to shutdown
-static uint32_t load = (CS_MAX*100)/TS ;				//Current RPU load
+static uint32_t load = (CS_MAX*100)/(TS) ;				//Current RPU load
 
 //static int debug_var = 123; Da decommentare per il DEBUG
 
