@@ -1,6 +1,4 @@
-/* This is a sample demonstration application that showcases usage of rpmsg
-This application is meant to run on the remote CPU running baremetal code.
-This application echoes back data that was sent to it by the master core. */
+
 
 //Xilinx
 #include "xil_printf.h"
@@ -57,32 +55,19 @@ static struct rpmsg_endpoint shared_ept;	//A Shared endpoint for each channel is
 //TaskManager handle
 static TaskHandle_t comm_task;
 
-static uint32_t AP_addr=0;
 /*-----------------------------------------------------------------------------*
  *  RPMSG endpoint callbacks
  *-----------------------------------------------------------------------------*/
 static int rpmsg_endpoint_cb(struct rpmsg_endpoint *ept, void *data, size_t len,
 				 uint32_t src, void *priv)
 {
-	//TickType_t Start;
-	//TickType_t End;
 
-	//Start = xTaskGetTickCount();
-
-	//(void)priv;
-	//(void)src;
 	struct _payload *payload = (struct _payload *)data;
-
 	shared_variable = (*payload);
 	shared_ept = *ept;
-	//End = xTaskGetTickCount();
-	//DEBUG
-	//LPRINTF("\n [RPU]:CALLBACK awake\n");
-	//LPRINTF(" [RPU]:CALLBACK start: %d\n", Start);
-	//LPRINTF(" [RPU]:CALLBACK end:   %d\n", End);
-
 	return RPMSG_SUCCESS;
 }
+
 
 static void rpmsg_service_unbind(struct rpmsg_endpoint *ept)
 {
@@ -90,6 +75,7 @@ static void rpmsg_service_unbind(struct rpmsg_endpoint *ept)
 	LPRINTF("[RPU]: unexpected Remote endpoint destroy\n");
 	shutdown_req = 1;
 }
+
 
 /*-----------------------------------------------------------------------------*
  *  Application
@@ -123,15 +109,20 @@ int TaskManager(struct rpmsg_device *rdev, void *priv)
 	/* Initialize the xLastWakeTime variable with the current time.*/
 	xLastWakeTime = xTaskGetTickCount();
 
+
+	/* Initialization ss task*/
+	  xTaskCreate(sporadicServer, "SS Task", 256, NULL, 4, &ssTask);
+
+
 	/* Initialization parameter ss*/
 
 
 	 // xTaskCreate(sporadicServer, "SS Task", 256, NULL, 4, &ssTask);
 	  xTaskCreate(activeWaiting, "SS Task", 256, NULL, 6, &ssTask);
 	  vTaskDelay(1000000);
+
 	for( ;; )
 	{
-		//platform_poll(priv);
 
 		// Wait for the next cycle.
 		vTaskDelayUntil( &xLastWakeTime, xFrequency);
@@ -194,7 +185,7 @@ int TaskManager(struct rpmsg_device *rdev, void *priv)
 			if(j == RPU_N_TASK){
 				if(printscreen) LPRINTF("[RPU]: The requested Task doesn't exist!\n");
 			}
-			/*Same Task request (to change.....)*/
+			/*Same Periodic Task request: only one instance per periodic task */
 			else if(Task_vector[j].running == 1 && j <= RPU_N_P_TASK){
 				if(printscreen) LPRINTF("[RPU]: Task already running!\n");
 			}
@@ -204,6 +195,7 @@ int TaskManager(struct rpmsg_device *rdev, void *priv)
 				addr = addr + 1;
 			//control aperiodic / periodic
 				if (shared_variable.command <= RPU_N_P_TASK){
+				   //Periodic task: add load to current load and create task
 					task_load = Task_vector[j].load;
 					load = load + task_load;
 
@@ -221,7 +213,7 @@ int TaskManager(struct rpmsg_device *rdev, void *priv)
 					}
 
 				}	else {
-						AP_addr = addr;	//Address auto-increment
+						//aperiodic task: send event to ss task
 						request_code = shared_variable.command;
 						if(printscreen) LPRINTF("[RPU]: Sending address data...\n");
 						rpmsg_send(&shared_ept, &addr, sizeof(uint32_t));
@@ -320,11 +312,12 @@ void controlSwitchingIN(TaskHandle_t * nextTcb){
 	}
 }
 
+
 void controlSwitchingOut (TaskHandle_t * currentTcb){
 
 	if (runningTask == currentTcb && controlling ){
-		runtime += (xTaskGetTickCount() - startTime) ;
-
+		runtime += xTaskGetTickCount() - startTime ;
+		startTime = xTaskGetTickCount();
 	} else if (!controlling)
 		runtime = 0;
 }
@@ -334,9 +327,8 @@ void controlSwitchingOut (TaskHandle_t * currentTcb){
  * NB: for stopping any aperiodic task, it needs to call this function
  * *******************************************************/
 void deleteATask(){
-
 	runningTask = NULL;
-	LPRINTF("%d Aperiodic task 1 terminate its execution at time: %d \n", pdTICKS_TO_MS(xTaskGetTickCount()));
+	controlSwitchingOut(NULL);
 	xEventGroupSetBits(eventManager, EVENT_STOP);
 	vTaskDelete(NULL);
 }
@@ -370,7 +362,7 @@ void sporadicServer(){
 							runningIndex = i;
 							checkWCET(0,i,0);
 						} else{
-							//LPRINTF("[SS] resource occupied, pushing task in queue. \n");
+							LPRINTF("[SS] resource occupied, pushing task in queue. \n");
 							push_queuePR(pendingRequest, request_code);
 						}
 
@@ -400,7 +392,6 @@ void sporadicServer(){
 						CS -= runtime;
 						RA_TOT+=runtime;
 						controlling = 0;
-						//LPRINTF("[SS] task ended. totalruntime = %d ticks, %d ms, runtime %d cs %d\n",totalRuntime,pdTICKS_TO_MS(totalRuntime),runtime,CS);
 						totalRuntime = 0;
 						xEventGroupClearBits(eventManager, EVENT_STOP);
 						if(CS > 0 && !queuePRIsEmpty(pendingRequest)){
@@ -445,20 +436,24 @@ void checkWCET(TickType_t sub_wcet, int index,int suspend){
 
 	    if (CS >=remainingExTime){
 
-	    	LPRINTF("[SS] capacity greater than wcet. executing task \n");
+	    // capacity greater than wcet: can run all the task's work
 	    	startTasks(index,remainingExTime,suspend);
 
 	    } else if (CS > 0 && CS < remainingExTime){
-	    	LPRINTF("[SS] capacity less than wcet. executing task partially \n");
+	   // capacity less than wcet: not enough to execute all the task
 	    	CS_old = CS;
+	    	//control if is a consecutive request after stop
 	    	if (RA_TOT==0){
-
+	    		//not consecutive request: create new istance of timer
 	    		timerCSOLD = xTimerCreate("Timer CS OLD", CS_old, pdFALSE, (void *)TIMER_CS_ID, timerCallBack);
 	    		if(xTimerStart(timerCSOLD,3) == pdFAIL){
 	    			LPRINTF("[SS] ERROR: timer not started \n");
-	    		} else
+	    		} else{
 	    			startTasks(index,CS_old,suspend);
+
+	    		}
 	    	} else{
+    			//consecutive request: timer already active, only change period
 	    		if(xTimerChangePeriod(timerCSOLD,CS_old,3) == pdFAIL){
 	    			LPRINTF("[SS] ERROR: timer not started \n");
 	    		} else
@@ -477,17 +472,19 @@ void checkWCET(TickType_t sub_wcet, int index,int suspend){
 
 
 void startTasks(int index,TickType_t wcet, int suspend ){
+
 	controlling = 1;
+
+ //control if it is a new request or resume request
 	if (!suspend){
 		xTaskCreate(Task_vector[index].function, Task_vector[index].name, 256, NULL,
 						Task_vector[index].priority, Task_vector[index].Handler);
 		runningTask = *(Task_vector[index].Handler);
-		LPRINTF("[SS] aperiodic request served. \n");
 	} else{
-		LPRINTF("[SS] task resumed at time: %d \n", pdTICKS_TO_MS(xTaskGetTickCount()));
+		LPRINTF("[SS] Resume at t: %d \n", xTaskGetTickCount());
 		vTaskResume(runningTask);
 	}
-
+	//controlling if it is a not consecutive request: only in this case need to start a timer TS
 	if (RA_TOT==0){
 		TickType_t time;
 		if (TA != 0){
@@ -497,8 +494,6 @@ void startTasks(int index,TickType_t wcet, int suspend ){
 			time = TS;
 
 		TimerHandle_t timer = xTimerCreate("Timer RT",  time, pdFALSE, (void *)TIMER_TS_ID ,timerCallBack);
-		
-		LPRINTF("[SS] Next RT at time: %d , with TA= %d \n", pdTICKS_TO_MS(time+xTaskGetTickCount()), TA);
 
 		TIMER_TS_ID++;
 		if (TIMER_TS_ID % N_MAX_TIMER == 0)
@@ -534,14 +529,17 @@ void timerCallBack( TimerHandle_t timerHandler){
 
 
 void timerTS(void * pvParameters){
+
 	TickType_t RA = pop_queue(pendingRA);
 	CS += RA;
 	int HigherPriorityTaskEx = 0;
 
+//calculate Ta only if there is at least one higher priority task running and pending request
+
 	for (int i = 0; i < RPU_N_TASK && HigherPriorityTaskEx == 0 ; i++){
 
 		if (*(Task_vector[i].Handler)!= NULL && eTaskGetState(*(Task_vector[i].Handler)) == eReady
-				&& Task_vector[i].priority >  uxTaskPriorityGet(ssTask) && (runningIndex==1 || !queuePRIsEmpty(pendingRequest)))
+				&& Task_vector[i].priority >  uxTaskPriorityGet(ssTask) && (runningTask!=NULL || !queuePRIsEmpty(pendingRequest)))
 			HigherPriorityTaskEx = 1;
 
 	}
@@ -551,7 +549,7 @@ void timerTS(void * pvParameters){
 	else
 		TA = 0;
 
-
+//decide wich request needs to be made at ss task
 	if (suspendedTask){
 		suspendedTask = 0;
 		xEventGroupSetBits(eventManager, EVENT_SUSPEND);
@@ -560,37 +558,42 @@ void timerTS(void * pvParameters){
 		xEventGroupSetBits(eventManager, EVENT_QUEUE);
 	}
 	if (RA > 0)
-		LPRINTF("[TIMERTS] capacity CS recharged of %d ticks at time %d. CS = %d\n",RA,pdTICKS_TO_MS(xTaskGetTickCount()),CS );
+		LPRINTF("[TIMERTS] recharged %d ticks at t %d. CS = %d\n",RA,xTaskGetTickCount(),CS );
 
 	vTaskDelete(NULL);
 }
 
 
 void timerCS(void* pvParameters){
+	//control if running task has finished before expire of timer
 	if (runningTask!= NULL){
+
 		long remainingExTime = (long)(CS_old - runtime);
+		//control remaining execution time
 		if (remainingExTime > 0){
+			//positive: there have been preemption from higher priority task, so CS has not been totally consumed
 			if (xTimerChangePeriod(timerCSOLD,remainingExTime,5) == pdFAIL){
 
 				LPRINTF("[TIMERCSOLD] error recharging timer\n");
 
-			} //else
-				//LPRINTF("[TIMERCSOLD] timer expired but remaining time execution equal to %d.\n", remainingExTime);
-
+			}
 		}
-		else if (remainingExTime == 0){
-	    	CS -= CS_old;
+		else if (remainingExTime==0){
+			//capacity totally consumed
+	    	CS -= runtime;
+	    	//check if the capacity has been updated in the meantime (timer TS expired)
 	    	if (CS > 0){
+	    		//updated: continue execution of running task with new remaining capacity
 	    		CS_old = CS;
-	    		if (xTimerChangePeriod(timerCSOLD,remainingExTime,5) == pdFAIL){
+	    		if (xTimerChangePeriod(timerCSOLD,CS_old,5) == pdFAIL){
 
 	    						LPRINTF("[TIMERCSOLD] error recharging timer\n");
 
 	    					}
 	    	} else {
+	    		//not updated: suspend task until the timer TS expires
 				totalRuntime += runtime;
-				
-				LPRINTF("[TIMERCSOLD] Timer expired, capacity all consumed at time: %d.\n Aperiodic Task suspended. \n", pdTICKS_TO_MS(xTaskGetTickCount()));
+				LPRINTF("[TIMERCSOLD] TE ts: %d \n", xTaskGetTickCount());
 				suspendedTask = 1;
 				push_queue(pendingRA, runtime + RA_TOT);
 				RA_TOT = 0;
@@ -599,12 +602,9 @@ void timerCS(void* pvParameters){
 
 	    	}
 		} else
-			LPRINTF("[TIMERCSOLD] ERROR cs overflow. \n");
+			LPRINTF("[TIMERCSOLD] ERROR cs overflow. runtime = %d  cs = %d \n",runtime,CS_old);
 
-	} //else {
-//		LPRINTF("[TIMERCSOLD] task ended. \n");
-//	}
-
+	}
 
 	vTaskDelete(NULL);
 }
@@ -620,9 +620,6 @@ void timerCS(void* pvParameters){
 int main(void)
 {
 	BaseType_t stat;
-
-	/* COMMENTARE SE NON SI USA IL DEBUGGER (attach on running target) DI SDK! */
-	//while (debug_var == 123) ;
 
 	/* Create the tasks */
 	stat = xTaskCreate(processing, ( const char * ) "HW2",

@@ -35,8 +35,8 @@
 #define IPI_CHN_BITMASK      0x0000020
 #else
 #define IPI_BASE_ADDR        XPAR_XIPIPSU_0_BASE_ADDRESS /* IPI base address*/
-#define IPI_CHN_BITMASK      0x01000000 /* IPI channel bit mask for IPI from/to
-					   APU */
+#define IPI_CHN_BITMASK      0x01000000 /* IPI channel bit mask for IPI from/to APU */
+
 #endif /* versal */
 
 /* Cortex R5 memory attributes */
@@ -47,7 +47,7 @@
 #define	PRIV_RW_USER_RW		(0x00000003U<<8U) /* Full Access */
 
 #if XPAR_CPU_ID == 0
-#define SHARED_MEM_PA  0x3ED40000UL
+#define SHARED_MEM_PA  0x3ED40000UL /* 0x3ED40000UL ORIGINALLY*/
 #else
 #define SHARED_MEM_PA  0x3EF40000UL
 #endif /* XPAR_CPU_ID */
@@ -234,7 +234,6 @@ int platform_poll(void *priv)
 	struct remoteproc *rproc = priv;
 	struct remoteproc_priv *prproc;
 	unsigned int flags;
-	const TickType_t x001second = pdMS_TO_TICKS( 10 );
 
 	prproc = rproc->priv;
 	while(1) {
@@ -246,7 +245,6 @@ int platform_poll(void *priv)
 		}
 		_rproc_wait();
 		metal_irq_restore_enable(flags);
-		vTaskDelay( x001second );
 	}
 	return 0;
 }

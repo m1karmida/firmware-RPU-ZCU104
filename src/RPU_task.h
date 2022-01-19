@@ -2,10 +2,6 @@
 #ifndef _RPU_TASK.H
 #define _RPU_TASK.H
 
-#ifndef pdTICKS_TO_MS
-    #define pdTICKS_TO_MS( xTimeInTicks )    ( ( TickType_t ) ( ( ( TickType_t ) ( xTimeInTicks ) * ( TickType_t ) 1000U ) / ( TickType_t ) configTICK_RATE_HZ  ) )
-#endif
-
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -84,20 +80,28 @@ void periodicTask5(void *unused_arg);
 
 void aperiodicTask1(void *unused_arg);
 
-/* The execution of the first three tasks is schedulable with Rate Monotonic.
- * The execution of the first four tasks is unschedulable with RM but they are under 100% of CPU utilization.
+/* The load of Sporadic server is 10%
+ * The execution of the first two tasks is schedulable with Rate Monotonic.
+ * The execution of the first three tasks is unschedulable with RM but they are under 100% of CPU utilization.
  * The execution of the first five tasks is unschedulable.
 */
-static const int WCET = 500;
-//RPU Tasks
+
+static const int WCET = 50*45;
+/*RPU task
+ * NOTE: the second parameter for periodic task represent the percentage utilization factor
+ * 		 for aperiodic tasks represent the worst case execution time because the load is not needed for them (handled by SS's load)
+ * */
+
 static struct RPU_Task Task_vector[RPU_N_TASK] =
 {
-	{TASK_1, STOP_TASK_1, 34, periodicTask1, "periodicTask1", 6, &perodic_task_handle1, 0},		//Task 1 T=15
-	{TASK_2, STOP_TASK_2, 25, periodicTask2, "periodicTask2", 5, &perodic_task_handle2, 0},		//Task 2 T=40
-	{TASK_3, STOP_TASK_3, 17, periodicTask3, "periodicTask3", 4, &perodic_task_handle3, 0},		//Task 3 T=90
+	{TASK_1, STOP_TASK_1, 34, periodicTask1, "periodicTask1", 7, &perodic_task_handle1, 0},		//Task 1 T=15
+	{TASK_2, STOP_TASK_2, 25, periodicTask2, "periodicTask2", 6, &perodic_task_handle2, 0},		//Task 2 T=40
+	{TASK_3, STOP_TASK_3, 17, periodicTask3, "periodicTask3", 5, &perodic_task_handle3, 0},		//Task 3 T=90
 	{TASK_4, STOP_TASK_4, 20, periodicTask4, "periodicTask4", 3, &perodic_task_handle4, 0},		//Task 4 T=100
 	{TASK_5, STOP_TASK_5, 10, periodicTask5, "periodicTask5", 2, &perodic_task_handle5, 0},		//Task 5 T=300
-	{ATASK_1, STOP_ATASK_1, WCET, aperiodicTask1, "aperiodicTask1", 4, &aperodic_task_handle1, 0}		//Task 5 T=
+
+
+	{ATASK_1, STOP_ATASK_1, WCET, aperiodicTask1, "aperiodicTask1", 4, &aperodic_task_handle1, 0}
 };
 
 
