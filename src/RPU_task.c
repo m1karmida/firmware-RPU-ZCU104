@@ -147,7 +147,7 @@ void periodicTask4(void *unused_arg)
 	         restart_time = xTaskGetTickCount() - start;
 	         start = xTaskGetTickCount();
 	         LPRINTF("[PT4]:StartTime: %d\n", start);
-	         activeWaiting(60*45);
+	         activeWaiting(30*45);
 	         end = xTaskGetTickCount();
 	         LPRINTF("[PT4]:EndTime: %d\n", end);
 
